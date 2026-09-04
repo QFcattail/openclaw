@@ -236,6 +236,9 @@ const CORE_GATEWAY_HANDLER_MODULES = {
   skills: () => import("./server-methods/skills.js").then((module) => module.skillsHandlers),
   system: () => import("./server-methods/system.js").then((module) => module.systemHandlers),
   talk: () => import("./server-methods/talk.js").then((module) => module.talkHandlers),
+  // Mode synchronization does not depend on loading speech or realtime providers.
+  "talk-mode": () =>
+    import("./server-methods/talk-mode.js").then((module) => module.talkModeHandlers),
   tasks: () => import("./server-methods/tasks.js").then((module) => module.tasksHandlers),
   "task-suggestions": () =>
     import("./server-methods/task-suggestions.js").then((module) => module.taskSuggestionsHandlers),
