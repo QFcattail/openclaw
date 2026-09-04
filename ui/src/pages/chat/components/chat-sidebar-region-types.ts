@@ -19,6 +19,7 @@ export type SidebarPanelDefinition = {
 };
 
 export type SidebarRegionCallbacks = {
+  makeMain: (panelId: string) => void;
   activatePanel: (panelId: string) => void;
   closeSlot: (slot: SidebarSlotId) => void;
   openSlot: (slot: SidebarSlotId) => void;
