@@ -1707,6 +1707,50 @@ describe("chrome MCP page parsing", () => {
     expect(closeMock).toHaveBeenCalledTimes(3);
   });
 
+  it.each([0, 2 * 1024 * 1024])(
+    "initializes a real MCP child that writes %i stderr bytes before replying",
+    async (stderrBytes) => {
+      const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-chrome-mcp-startup-"));
+      const fakeMcpCommand = path.join(tempDir, "fake-mcp.mjs");
+      await fs.writeFile(
+        fakeMcpCommand,
+        `#!/usr/bin/env node
+import readline from "node:readline";
+const input = readline.createInterface({ input: process.stdin });
+input.on("line", (line) => {
+  const request = JSON.parse(line);
+  const reply = (result) => process.stdout.write(JSON.stringify({
+    jsonrpc: "2.0", id: request.id, result,
+  }) + "\\n");
+  if (request.method === "initialize") {
+    process.stderr.write("x".repeat(${stderrBytes}), () => reply({
+      protocolVersion: request.params.protocolVersion,
+      capabilities: { tools: {} },
+      serverInfo: { name: "synthetic-startup", version: "1.0.0" },
+    }));
+  } else if (request.method === "tools/list") {
+    reply({ tools: [{ name: "list_pages", inputSchema: { type: "object" } }] });
+  }
+});
+input.on("close", () => process.exit(0));
+`,
+      );
+      await fs.chmod(fakeMcpCommand, 0o755);
+      try {
+        await expect(
+          ensureChromeMcpAvailable(
+            "startup-profile",
+            { cdpUrl: "http://127.0.0.1:9222", mcpCommand: fakeMcpCommand },
+            { ephemeral: true },
+          ),
+        ).resolves.toBeUndefined();
+      } finally {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+    },
+    40_000,
+  );
+
   it("redacts remote CDP URL secrets from attach failures", async () => {
     const secretToken = "browserless-secret-token-1234567890"; // pragma: allowlist secret
     const user = "browser-user";
