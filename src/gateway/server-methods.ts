@@ -248,6 +248,7 @@ const CORE_GATEWAY_HANDLER_MODULES = {
   "tools-invoke": () =>
     import("./server-methods/tools-invoke.js").then((module) => module.toolsInvokeHandlers),
   "mcp-app": () => import("./server-methods/mcp-app.js").then((module) => module.mcpAppHandlers),
+  canvas: () => import("./server-methods/canvas.js").then((module) => module.canvasHandlers),
   tts: () => import("./server-methods/tts.js").then((module) => module.ttsHandlers),
   update: () => import("./server-methods/update.js").then((module) => module.updateHandlers),
   usage: () => import("./server-methods/usage.js").then((module) => module.usageHandlers),
