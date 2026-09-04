@@ -464,22 +464,29 @@ describe("Control UI plugin and catalog icon routes", () => {
   it("closes the descriptor when rejecting an empty package icon", async () => {
     writeFileSync(localIconPath, "");
     const opened = vi.spyOn(boundaryFileRead, "openRootFile");
-    const response = await request("/__openclaw__/plugin-icon/empty-package");
-    expect(response.status).toBe(404);
-    const receipt = await opened.mock.results[0]?.value;
-    expect(receipt?.ok).toBe(true);
-    if (!receipt?.ok) {
-      throw new Error("expected the real empty icon file to open");
-    }
     try {
-      expect(() => fstatSync(receipt.fd)).toThrow(expect.objectContaining({ code: "EBADF" }));
+      const response = await request("/__openclaw__/plugin-icon/empty-package");
+      expect(response.status).toBe(404);
+      const receipt = await opened.mock.results[0]?.value;
+      expect(receipt?.ok).toBe(true);
+      if (!receipt?.ok) {
+        throw new Error("expected the real empty icon file to open");
+      }
+      let iconStillOpen = false;
+      try {
+        // The OS can reuse the descriptor number before the HTTP response arrives.
+        const current = fstatSync(receipt.fd);
+        iconStillOpen = current.dev === receipt.stat.dev && current.ino === receipt.stat.ino;
+      } catch (error) {
+        expect(error).toMatchObject({ code: "EBADF" });
+      }
+      // Zero file IDs do not establish ownership for failure cleanup.
+      if (iconStillOpen && receipt.stat.dev !== 0 && receipt.stat.ino !== 0) {
+        closeSync(receipt.fd);
+      }
+      expect(iconStillOpen).toBe(false);
     } finally {
       opened.mockRestore();
-      try {
-        closeSync(receipt.fd);
-      } catch {
-        // The fixed owner already released this descriptor.
-      }
     }
   });
 
